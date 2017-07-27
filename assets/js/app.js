@@ -1050,19 +1050,18 @@ var unsplash = new _unsplashJs2.default({
 	callbackUrl: 'urn:ietf:wg:oauth:2.0:oob'
 });
 
-function debounce(func, wait, immediate) {
-	var timeout;
+function debounce(f, ms) {
+	var state = null;
+	var FROZEN = 1;
+
 	return function () {
-		var context = this,
-		    args = arguments;
-		var later = function later() {
-			timeout = null;
-			if (!immediate) func.apply(context, args);
-		};
-		var callNow = immediate && !timeout;
-		clearTimeout(timeout);
-		timeout = setTimeout(later, wait);
-		if (callNow) func.apply(context, args);
+		if (state) return;
+
+		f.apply(this, arguments);
+		state = FROZEN;
+		setTimeout(function () {
+			state = null;
+		}, ms);
 	};
 }
 
@@ -1072,24 +1071,22 @@ $(document).ready(function () {
 	    slider = $('.slider'),
 	    handRight = $('.hand-right'),
 	    FINGER_RATIO_X = 2.95,
-	    //коэфициенты пропорциональности, в каком месте должен находится палец по отношению к руке
-	FINGER_RATIO_Y = 3.351,
-	    // можно ли сделать красивее?
-	SLIDER_RATIO_X = 11.793,
+	    FINGER_RATIO_Y = 3.351,
+	    SLIDER_RATIO_X = 11.793,
 	    SLIDER_RATIO_Y = 10.687,
 	    HAND_RIGHT_RATIO_X = -7.29,
 	    HAND_RIGHT_RATIO_Y = 5.96;
 
 	setPositionAll();
 
-	$(window).resize(setPositionAll);
-	document.addEventListener('wheel', debounce(onScroll, 200));
+	window.addEventListener('resize', setPositionAll);
+	document.addEventListener('wheel', debounce(onScroll, 2000));
+	document.addEventListener('touchmove', debounce(onScroll, 2000));
 
 	function setPositionAll() {
 		setPosition(finger, FINGER_RATIO_X, FINGER_RATIO_Y);
 		setPosition(slider, SLIDER_RATIO_X, SLIDER_RATIO_Y);
 		setPosition(handRight, HAND_RIGHT_RATIO_X, HAND_RIGHT_RATIO_Y);
-		// shiftSecondPicture(); //пыталась сделать выдвижение картинки обоев справа
 	}
 
 	function onScroll() {
@@ -1106,22 +1103,10 @@ $(document).ready(function () {
 		});
 	}
 
-	function shiftSecondPicture(pic) {
-		if (!pic) {
-			pic = slider.children().not('.slider-pic--active');
-		}
-
-		pic[0].onload = function () {
-			pic.css({
-				right: '-' + secondPicture.width() + 'px'
-			});
-		};
-	}
-
 	function slideNextPicture() {
+		var picId = void 0;
 		var source = 'https://source.unsplash.com/',
 		    size = '/270x480',
-		    picId = void 0,
 		    firstPicture = slider.children(':first-child'),
 		    secondPicture = slider.children(':last-child');
 
@@ -1136,10 +1121,10 @@ $(document).ready(function () {
 			unsplash.photos.getRandomPhoto().then(_unsplashJs.toJson).then(function (json) {
 				picId = json.id;
 				pic1.attr('src', source + picId + size);
+				console.log(source + picId + size);
 			});
 			pic1.removeClass('slider-pic--active');
 			pic2.addClass('slider-pic--active');
-			//shiftSecondPicture(pic1);
 		}
 	}
 
